@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
@@ -52,5 +53,28 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("Starting battle!");
         battleSystem.StartBattleSystem();
+    }
+
+    public void PlayTurn(string _move)
+    {
+        switch (_move) 
+        {
+            case "Slash":
+                StartCoroutine(battleSystem.Slash());
+                break;
+            case "Protect":
+                StartCoroutine(battleSystem.Block());
+                break;
+            case "Whirlwind":
+                StartCoroutine(battleSystem.Whirlwind());
+                break;
+            case "Heal":
+                StartCoroutine(battleSystem.PlayerBag());
+                break;
+            case "Flurry":
+                StartCoroutine(battleSystem.Flurry());
+                break;
+        }
+
     }
 }

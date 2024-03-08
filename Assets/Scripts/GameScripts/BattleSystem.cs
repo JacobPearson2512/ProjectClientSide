@@ -65,7 +65,7 @@ public class BattleSystem : MonoBehaviour
         playerUI.SetUI(localPlayerUnit);
         enemyUI.SetUI(enemyUnit);
 
-        dialogue.text = enemyUnit.username + " appeared!";
+        dialogue.text = enemyUnit.name + " appeared!";
         bagButtonText.text = "Heal\n(Potions: " + numberPotions + ")";
 
         yield return new WaitForSeconds(2f);
@@ -100,7 +100,7 @@ public class BattleSystem : MonoBehaviour
         dialogue.text = "What will you do?";
     }
 
-    IEnumerator Block()
+    public IEnumerator Block()
     {
         /*moveSelector.SetActive(false);
         playerAnimator.SetTrigger("Block");
@@ -109,15 +109,12 @@ public class BattleSystem : MonoBehaviour
         yield return new WaitForSeconds(2f);
         state = BattleState.ENEMYTURN;
         StartCoroutine(EnemyTurn());*/
-        moveSelector.SetActive(false);
-        ClientSend.MoveSelected("Protect");
-        dialogue.text = localPlayerUnit.name + " used Block!";
         yield return new WaitForSeconds(2f);
         state = BattleState.ENEMYTURN;
         StartCoroutine(EnemyTurn());
     }
 
-    IEnumerator Slash()
+    public IEnumerator Slash()
     {
         /*moveSelector.SetActive(false);
         playerAnimator.SetTrigger("Slash");
@@ -135,9 +132,7 @@ public class BattleSystem : MonoBehaviour
             state = BattleState.ENEMYTURN;
             StartCoroutine(EnemyTurn());
         }*/
-        moveSelector.SetActive(false);
-        ClientSend.MoveSelected("Slash");
-        dialogue.text = localPlayerUnit.username + " used Slash!";
+        
         enemyUI.SetHP(enemyUnit.currentHP);
         yield return new WaitForSeconds(2f);
         if (enemyUnit.currentHP <= 0)
@@ -157,7 +152,7 @@ public class BattleSystem : MonoBehaviour
 
     }
 
-    IEnumerator Whirlwind()
+    public IEnumerator Whirlwind()
     {
         /*moveSelector.SetActive(false);
         playerAnimator.SetTrigger("Whirlwind");
@@ -179,9 +174,6 @@ public class BattleSystem : MonoBehaviour
             state = BattleState.ENEMYTURN;
             StartCoroutine(EnemyTurn());
         }*/
-        moveSelector.SetActive(false);
-        ClientSend.MoveSelected("Whirlwind");
-        dialogue.text = localPlayerUnit.username + " used Whirlwind Blade!";
         enemyUI.SetHP(enemyUnit.currentHP);
         enemyUI.SetDefense(enemyUnit.defense);
         yield return new WaitForSeconds(1f);
@@ -203,7 +195,7 @@ public class BattleSystem : MonoBehaviour
         }
     }
 
-    IEnumerator Flurry() // TODO done temp anim cause cant be arsed
+    public IEnumerator Flurry() // TODO done temp anim cause cant be arsed
     {
         /*moveSelector.SetActive(false);
         int timesHit = Random.Range(2, 6);
@@ -241,9 +233,6 @@ public class BattleSystem : MonoBehaviour
             state = BattleState.ENEMYTURN;
             StartCoroutine(EnemyTurn());
         }*/
-        moveSelector.SetActive(false);
-        ClientSend.MoveSelected("Flurry");
-        dialogue.text = localPlayerUnit.username + " used Flurry!";
         yield return new WaitForSeconds(2f);
         enemyUI.SetHP(enemyUnit.currentHP);
         if (enemyUnit.currentHP <= 0)
@@ -263,7 +252,7 @@ public class BattleSystem : MonoBehaviour
         
     }
 
-    IEnumerator PlayerBag()
+    public IEnumerator PlayerBag()
     {
         /*
         localPlayerUnit.usePotion(50);
@@ -275,12 +264,6 @@ public class BattleSystem : MonoBehaviour
         
         state = BattleState.ENEMYTURN;
         StartCoroutine(EnemyTurn());*/
-        if (localPlayerUnit.numberPotions <= 0)
-        {
-            yield break;
-        }
-        moveSelector.SetActive(false);
-        ClientSend.MoveSelected("Heal");
         yield return new WaitForSeconds(2f);
         dialogue.text = "You used a potion...";
         yield return new WaitForSeconds(1f);
@@ -342,8 +325,14 @@ public class BattleSystem : MonoBehaviour
         {
             return;
         }
-
-        StartCoroutine(PlayerBag());
+        if (localPlayerUnit.numberPotions <= 0)
+        {
+            //yield break;
+            return;
+        }
+        moveSelector.SetActive(false);
+        ClientSend.MoveSelected("Heal");
+        //StartCoroutine(PlayerBag());
     }
 
     public void OnBlock()
@@ -352,7 +341,10 @@ public class BattleSystem : MonoBehaviour
         {
             return;
         }
-        StartCoroutine(Block());
+        moveSelector.SetActive(false);
+        ClientSend.MoveSelected("Protect");
+        dialogue.text = localPlayerUnit.name + " used Block!";
+        //StartCoroutine(Block());
     }
 
     public void OnSlash()
@@ -361,7 +353,10 @@ public class BattleSystem : MonoBehaviour
         {
             return;
         }
-        StartCoroutine(Slash());
+        moveSelector.SetActive(false);
+        ClientSend.MoveSelected("Slash");
+        dialogue.text = localPlayerUnit.username + " used Slash!";
+        //StartCoroutine(Slash());
     }
 
     public void OnWhirlwind()
@@ -370,7 +365,10 @@ public class BattleSystem : MonoBehaviour
         {
             return;
         }
-        StartCoroutine(Whirlwind());
+        moveSelector.SetActive(false);
+        ClientSend.MoveSelected("Whirlwind");
+        dialogue.text = localPlayerUnit.username + " used Whirlwind Blade!";
+        //StartCoroutine(Whirlwind());
     }
 
     public void OnFlurry()
@@ -379,6 +377,9 @@ public class BattleSystem : MonoBehaviour
         {
             return;
         }
-        StartCoroutine(Flurry());
+        moveSelector.SetActive(false);
+        ClientSend.MoveSelected("Flurry");
+        dialogue.text = localPlayerUnit.username + " used Flurry!";
+        //StartCoroutine(Flurry());
     }
 }

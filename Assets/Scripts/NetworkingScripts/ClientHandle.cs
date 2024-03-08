@@ -5,6 +5,7 @@ using UnityEngine;
 
 public class ClientHandle : MonoBehaviour
 {
+    public static BattleSystem battleSystem;
     public static void Welcome(Packet _packet)
     {
         string _msg = _packet.ReadString();
@@ -52,5 +53,9 @@ public class ClientHandle : MonoBehaviour
         GameManager.players[_id].numberPotions = _packet.ReadInt();
         GameManager.players[_id].defense = _packet.ReadFloat();
         GameManager.players[_id].currentMove = _packet.ReadString();
+        if (_id == Client.instance.myID)
+        {
+            GameManager.instance.PlayTurn(GameManager.players[_id].currentMove);
+        }
     }
 }
