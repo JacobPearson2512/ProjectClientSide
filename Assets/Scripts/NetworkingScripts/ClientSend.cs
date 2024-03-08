@@ -36,6 +36,15 @@ public class ClientSend : MonoBehaviour
             SendUDPData(_packet);
         }
     }
+
+    public static void MoveSelected(string _move)
+    {
+        using (Packet _packet = new Packet((int)ClientPackets.moveSelection))
+        {
+            _packet.Write(_move);
+            SendUDPData(_packet);
+        }
+    }
     #endregion
 }
 

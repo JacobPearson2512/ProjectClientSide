@@ -43,4 +43,14 @@ public class ClientHandle : MonoBehaviour
         UIManager.instance.battleUI.SetActive(true);
         GameManager.instance.StartBattleSystem();
     }
+
+    public static void UpdatePlayer(Packet _packet)
+    {
+        int _id = _packet.ReadInt();
+        string _username = _packet.ReadString();
+        GameManager.players[_id].currentHP = _packet.ReadInt();
+        GameManager.players[_id].numberPotions = _packet.ReadInt();
+        GameManager.players[_id].defense = _packet.ReadFloat();
+        GameManager.players[_id].currentMove = _packet.ReadString();
+    }
 }

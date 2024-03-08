@@ -42,7 +42,7 @@ public class BattleSystem : MonoBehaviour
         {
             id2 = 1;
         }
-        enemyUnit = GameManager.players[id2]; //figure out what this client id would be
+        enemyUnit = GameManager.players[id2]; // TODO figure out what this client id would be
         enemyPlayer = enemyUnit.gameObject;
 
 
@@ -65,7 +65,7 @@ public class BattleSystem : MonoBehaviour
         playerUI.SetUI(localPlayerUnit);
         enemyUI.SetUI(enemyUnit);
 
-        dialogue.text = enemyUnit.name + " appeared!";
+        dialogue.text = enemyUnit.username + " appeared!";
         bagButtonText.text = "Heal\n(Potions: " + numberPotions + ")";
 
         yield return new WaitForSeconds(2f);
@@ -83,12 +83,12 @@ public class BattleSystem : MonoBehaviour
             enemyAnimator.SetTrigger("Die");
             yield return new WaitForSeconds(1f);
             Destroy(enemyPlayer);
-            dialogue.text = "You defeated " + enemyUnit.name;
+            dialogue.text = "You defeated " + enemyUnit.username;
             yield return new WaitForSeconds(2f);
         }
         else if (state == BattleState.LOST)
         {
-            dialogue.text = "You were defeated by " + enemyUnit.name;
+            dialogue.text = "You were defeated by " + enemyUnit.username;
             yield return new WaitForSeconds(2f);
             dialogue.text = "Restarting the game...";
             yield return new WaitForSeconds(2f);
@@ -102,9 +102,15 @@ public class BattleSystem : MonoBehaviour
 
     IEnumerator Block()
     {
-        moveSelector.SetActive(false);
+        /*moveSelector.SetActive(false);
         playerAnimator.SetTrigger("Block");
         localPlayerUnit.Block();
+        
+        yield return new WaitForSeconds(2f);
+        state = BattleState.ENEMYTURN;
+        StartCoroutine(EnemyTurn());*/
+        moveSelector.SetActive(false);
+        ClientSend.MoveSelected("Protect");
         dialogue.text = localPlayerUnit.name + " used Block!";
         yield return new WaitForSeconds(2f);
         state = BattleState.ENEMYTURN;
@@ -113,7 +119,7 @@ public class BattleSystem : MonoBehaviour
 
     IEnumerator Slash()
     {
-        moveSelector.SetActive(false);
+        /*moveSelector.SetActive(false);
         playerAnimator.SetTrigger("Slash");
         bool isDead = enemyUnit.ReduceHP(localPlayerUnit.damage);
         enemyUI.SetHP(enemyUnit.currentHP);
@@ -128,12 +134,32 @@ public class BattleSystem : MonoBehaviour
         {
             state = BattleState.ENEMYTURN;
             StartCoroutine(EnemyTurn());
+        }*/
+        moveSelector.SetActive(false);
+        ClientSend.MoveSelected("Slash");
+        dialogue.text = localPlayerUnit.username + " used Slash!";
+        enemyUI.SetHP(enemyUnit.currentHP);
+        yield return new WaitForSeconds(2f);
+        if (enemyUnit.currentHP <= 0)
+        {
+            state = BattleState.WON;
+            StartCoroutine(EndBattle());
         }
+        else
+        {
+            if (enemyUnit.currentMove == "Protect")
+            {
+                dialogue.text = enemyUnit.username + " blocked it!";
+            }
+            state = BattleState.ENEMYTURN;
+            StartCoroutine(EnemyTurn());
+        }
+
     }
 
     IEnumerator Whirlwind()
     {
-        moveSelector.SetActive(false);
+        /*moveSelector.SetActive(false);
         playerAnimator.SetTrigger("Whirlwind");
         bool isDead = enemyUnit.ReduceHP(15);
         enemyUnit.defense = Mathf.Round(enemyUnit.defense * 8f ) / 10;
@@ -152,14 +178,36 @@ public class BattleSystem : MonoBehaviour
         {
             state = BattleState.ENEMYTURN;
             StartCoroutine(EnemyTurn());
+        }*/
+        moveSelector.SetActive(false);
+        ClientSend.MoveSelected("Whirlwind");
+        dialogue.text = localPlayerUnit.username + " used Whirlwind Blade!";
+        enemyUI.SetHP(enemyUnit.currentHP);
+        enemyUI.SetDefense(enemyUnit.defense);
+        yield return new WaitForSeconds(1f);
+        dialogue.text = "Reduced " + enemyUnit.username + "2's defense by 10%!";
+        yield return new WaitForSeconds(2f);
+        if (enemyUnit.currentHP <= 0)
+        {
+            state = BattleState.WON;
+            StartCoroutine(EndBattle());
+        }
+        else
+        {
+            if (enemyUnit.currentMove == "Protect")
+            {
+                dialogue.text = enemyUnit.username + " blocked it!";
+            }
+            state = BattleState.ENEMYTURN;
+            StartCoroutine(EnemyTurn());
         }
     }
 
-    IEnumerator Flurry()
+    IEnumerator Flurry() // TODO done temp anim cause cant be arsed
     {
-        moveSelector.SetActive(false);
+        /*moveSelector.SetActive(false);
         int timesHit = Random.Range(2, 6);
-        dialogue.text = localPlayerUnit.name + " used Flurry!";
+        
         for (int i = 1; i < timesHit+1; i++)
         {
             yield return new WaitForSeconds(0.5f);
@@ -192,36 +240,66 @@ public class BattleSystem : MonoBehaviour
             yield return new WaitForSeconds(2f);
             state = BattleState.ENEMYTURN;
             StartCoroutine(EnemyTurn());
+        }*/
+        moveSelector.SetActive(false);
+        ClientSend.MoveSelected("Flurry");
+        dialogue.text = localPlayerUnit.username + " used Flurry!";
+        yield return new WaitForSeconds(2f);
+        enemyUI.SetHP(enemyUnit.currentHP);
+        if (enemyUnit.currentHP <= 0)
+        {
+            state = BattleState.WON;
+            StartCoroutine(EndBattle());
         }
+        else
+        {
+            if (enemyUnit.currentMove == "Protect")
+            {
+                dialogue.text = enemyUnit.username + " blocked it!";
+            }
+            state = BattleState.ENEMYTURN;
+            StartCoroutine(EnemyTurn());
+        }
+        
     }
 
     IEnumerator PlayerBag()
     {
-        if (numberPotions <= 0)
+        /*
+        localPlayerUnit.usePotion(50);
+        numberPotions -= 1;
+        
+        yield return new WaitForSeconds(1f);
+        
+        
+        
+        state = BattleState.ENEMYTURN;
+        StartCoroutine(EnemyTurn());*/
+        if (localPlayerUnit.numberPotions <= 0)
         {
             yield break;
         }
-        localPlayerUnit.usePotion(50);
-        numberPotions -= 1;
-        playerUI.SetHP(localPlayerUnit.currentHP);
+        moveSelector.SetActive(false);
+        ClientSend.MoveSelected("Heal");
+        yield return new WaitForSeconds(2f);
         dialogue.text = "You used a potion...";
         yield return new WaitForSeconds(1f);
-        dialogue.text = "Player healed " + 50 + " HP!";
-        yield return new WaitForSeconds(1f);
-        bagButtonText.text = "Heal\n(Potions: " + numberPotions + ")";
+        dialogue.text = $"{localPlayerUnit.username} healed " + 50 + " HP!";
+        playerUI.SetHP(localPlayerUnit.currentHP);
+        bagButtonText.text = "Heal\n(Potions: " + localPlayerUnit.numberPotions + ")";
         state = BattleState.ENEMYTURN;
         StartCoroutine(EnemyTurn());
     }
 
-    IEnumerator EnemyTurn()
+    IEnumerator EnemyTurn() // add dialogue for potion usage etc.
     {
-        dialogue.text = enemyUnit.name + " used " + enemyUnit.attackName;
+        dialogue.text = enemyUnit.username + " used " + enemyUnit.currentMove;
         yield return new WaitForSeconds(1f);
         enemyAnimator.SetTrigger("Hit");
-        if (localPlayerUnit.isBlocking)
+        if (localPlayerUnit.currentMove == "Protect")
         {
             dialogue.text = localPlayerUnit.name + " blocked the attack!";
-            localPlayerUnit.unBlock();
+            //localPlayerUnit.unBlock();
             yield return new WaitForSeconds(1f);
             state = BattleState.PLAYERTURN;
             playerAnimator.SetTrigger("EndOfTurn");
@@ -230,10 +308,10 @@ public class BattleSystem : MonoBehaviour
         else
         {
             playerAnimator.SetTrigger("Hit");
-            bool isDead = localPlayerUnit.ReduceHP(enemyUnit.damage);
+            //bool isDead = localPlayerUnit.ReduceHP(enemyUnit.damage);
             playerUI.SetHP(localPlayerUnit.currentHP);
             yield return new WaitForSeconds(1f);
-            if (isDead)
+            if (localPlayerUnit.currentHP <= 0)
             {
                 state = BattleState.LOST;
                 StartCoroutine(EndBattle());

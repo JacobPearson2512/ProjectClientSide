@@ -250,7 +250,8 @@ public class Client : MonoBehaviour
             {(int)ServerPackets.welcome, ClientHandle.Welcome},
             {(int)ServerPackets.udpTest, ClientHandle.UDPTest},
             {(int)ServerPackets.spawnPlayer, ClientHandle.SpawnPlayer},
-            {(int)ServerPackets.startBattle, ClientHandle.StartBattle}
+            {(int)ServerPackets.startBattle, ClientHandle.StartBattle},
+            {(int)ServerPackets.updatePlayer, ClientHandle.UpdatePlayer}
         };
         Debug.Log("Initialised packets.");
     }

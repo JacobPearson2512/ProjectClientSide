@@ -15,8 +15,8 @@ public class Unit : MonoBehaviour
     public float damage;
     [SerializeField]
     public float defense;
-    [SerializeField]
-    public string attackName;
+    public string currentMove;
+    public int numberPotions;
     public bool isBlocking = false;
 
     public bool ReduceHP(float damage)

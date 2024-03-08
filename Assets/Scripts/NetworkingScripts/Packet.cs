@@ -11,6 +11,7 @@ public enum ServerPackets
     welcome = 1,
     spawnPlayer,
     startBattle,
+    updatePlayer,
     udpTest
 }
 
@@ -18,6 +19,7 @@ public enum ServerPackets
 public enum ClientPackets
 {
     welcomeReceived = 1,
+    moveSelection,
     udpTestReceived
 }
 
