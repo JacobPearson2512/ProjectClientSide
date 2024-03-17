@@ -53,6 +53,7 @@ public class ClientHandle : MonoBehaviour
         GameManager.players[_id].numberPotions = _packet.ReadInt();
         GameManager.players[_id].defense = _packet.ReadFloat();
         GameManager.players[_id].currentMove = _packet.ReadString();
+        GameManager.players[_id].timesHit = _packet.ReadInt();
         if (_id == Client.instance.myID)
         {
             GameManager.instance.PlayTurn(GameManager.players[_id].currentMove);

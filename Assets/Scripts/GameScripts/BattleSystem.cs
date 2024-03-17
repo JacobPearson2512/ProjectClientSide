@@ -13,6 +13,7 @@ public class BattleSystem : MonoBehaviour
     public BattleState state;
 
     public GameObject moveSelector;
+    public GameObject waitingUI;
 
     Unit localPlayerUnit;
     Unit enemyUnit;
@@ -48,11 +49,11 @@ public class BattleSystem : MonoBehaviour
 
         numberPotions = 3;
         moveSelector.SetActive(false);
+        waitingUI.SetActive(false);
         state = BattleState.START;
         StartCoroutine(BeginBattle());
         
     }
-    // TODO: COMMENTS ARE OLD STUFF REMOVED WHEN ADAPTING
     IEnumerator BeginBattle()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -65,7 +66,7 @@ public class BattleSystem : MonoBehaviour
         playerUI.SetUI(localPlayerUnit);
         enemyUI.SetUI(enemyUnit);
 
-        dialogue.text = enemyUnit.name + " appeared!";
+        dialogue.text = enemyUnit.username + " appeared!";
         bagButtonText.text = "Heal\n(Potions: " + numberPotions + ")";
 
         yield return new WaitForSeconds(2f);
@@ -100,39 +101,19 @@ public class BattleSystem : MonoBehaviour
         dialogue.text = "What will you do?";
     }
 
-    public IEnumerator Block()
+    public IEnumerator Block() // Executed after the server sends return packet
     {
-        /*moveSelector.SetActive(false);
+        waitingUI.SetActive(false);
         playerAnimator.SetTrigger("Block");
-        localPlayerUnit.Block();
-        
-        yield return new WaitForSeconds(2f);
-        state = BattleState.ENEMYTURN;
-        StartCoroutine(EnemyTurn());*/
         yield return new WaitForSeconds(2f);
         state = BattleState.ENEMYTURN;
         StartCoroutine(EnemyTurn());
     }
 
-    public IEnumerator Slash()
+    public IEnumerator Slash() // Executed after the server sends return packet
     {
-        /*moveSelector.SetActive(false);
+        waitingUI.SetActive(false);
         playerAnimator.SetTrigger("Slash");
-        bool isDead = enemyUnit.ReduceHP(localPlayerUnit.damage);
-        enemyUI.SetHP(enemyUnit.currentHP);
-        dialogue.text = localPlayerUnit.name + " used Slash!";
-        yield return new WaitForSeconds(2f);
-        if (isDead)
-        {
-            state = BattleState.WON;
-            StartCoroutine(EndBattle());
-        }
-        else
-        {
-            state = BattleState.ENEMYTURN;
-            StartCoroutine(EnemyTurn());
-        }*/
-        
         enemyUI.SetHP(enemyUnit.currentHP);
         yield return new WaitForSeconds(2f);
         if (enemyUnit.currentHP <= 0)
@@ -152,32 +133,14 @@ public class BattleSystem : MonoBehaviour
 
     }
 
-    public IEnumerator Whirlwind()
+    public IEnumerator Whirlwind() // Executed after the server sends return packet
     {
-        /*moveSelector.SetActive(false);
+        waitingUI.SetActive(false);
         playerAnimator.SetTrigger("Whirlwind");
-        bool isDead = enemyUnit.ReduceHP(15);
-        enemyUnit.defense = Mathf.Round(enemyUnit.defense * 8f ) / 10;
-        enemyUI.SetHP(enemyUnit.currentHP);
-        enemyUI.SetDefense(enemyUnit.defense);
-        dialogue.text = localPlayerUnit.name + " used Whirlwind Blade!";
-        yield return new WaitForSeconds(1f);
-        dialogue.text = "Reduced " + enemyUnit.name + "'s defense by 10%!";
-        yield return new WaitForSeconds(2f);
-        if (isDead)
-        {
-            state = BattleState.WON;
-            StartCoroutine(EndBattle());
-        }
-        else
-        {
-            state = BattleState.ENEMYTURN;
-            StartCoroutine(EnemyTurn());
-        }*/
         enemyUI.SetHP(enemyUnit.currentHP);
         enemyUI.SetDefense(enemyUnit.defense);
         yield return new WaitForSeconds(1f);
-        dialogue.text = "Reduced " + enemyUnit.username + "2's defense by 10%!";
+        dialogue.text = "Reduced " + enemyUnit.username + "'s defense by 20%!";
         yield return new WaitForSeconds(2f);
         if (enemyUnit.currentHP <= 0)
         {
@@ -195,12 +158,11 @@ public class BattleSystem : MonoBehaviour
         }
     }
 
-    public IEnumerator Flurry() // TODO done temp anim cause cant be arsed
+    public IEnumerator Flurry() // Executed after the server sends return packet
     {
-        /*moveSelector.SetActive(false);
-        int timesHit = Random.Range(2, 6);
-        
-        for (int i = 1; i < timesHit+1; i++)
+        waitingUI.SetActive(false);
+        int timesHit = localPlayerUnit.timesHit;
+        for (int i = 1; i < timesHit + 1; i++)
         {
             yield return new WaitForSeconds(0.5f);
             if (i % 2 == 0)
@@ -213,26 +175,10 @@ public class BattleSystem : MonoBehaviour
                 Debug.Log("right");
                 playerAnimator.SetTrigger("FlurryRight");
             }
-            bool isDead = enemyUnit.ReduceHP(15);
-            enemyUI.SetHP(enemyUnit.currentHP);
-            if (isDead)
-            {
-                yield return new WaitForSeconds(1f);
-                dialogue.text = "Hit " + enemyUnit.name + " " + i + " times!";
-                yield return new WaitForSeconds(2f);
-                state = BattleState.WON;
-                StartCoroutine(EndBattle());
-                break;
-            }
+            
         }
-        if (state != BattleState.WON)
-        {
-            dialogue.text = "Hit " + enemyUnit.name + " " + timesHit + " times!";
-            playerAnimator.SetTrigger("EndOfTurn");
-            yield return new WaitForSeconds(2f);
-            state = BattleState.ENEMYTURN;
-            StartCoroutine(EnemyTurn());
-        }*/
+        yield return new WaitForSeconds(1f);
+        dialogue.text = "Hit " + enemyUnit.username + " " + timesHit + " times!";
         yield return new WaitForSeconds(2f);
         enemyUI.SetHP(enemyUnit.currentHP);
         if (enemyUnit.currentHP <= 0)
@@ -254,16 +200,7 @@ public class BattleSystem : MonoBehaviour
 
     public IEnumerator PlayerBag()
     {
-        /*
-        localPlayerUnit.usePotion(50);
-        numberPotions -= 1;
-        
-        yield return new WaitForSeconds(1f);
-        
-        
-        
-        state = BattleState.ENEMYTURN;
-        StartCoroutine(EnemyTurn());*/
+        waitingUI.SetActive(false);
         yield return new WaitForSeconds(2f);
         dialogue.text = "You used a potion...";
         yield return new WaitForSeconds(1f);
@@ -272,17 +209,28 @@ public class BattleSystem : MonoBehaviour
         bagButtonText.text = "Heal\n(Potions: " + localPlayerUnit.numberPotions + ")";
         state = BattleState.ENEMYTURN;
         StartCoroutine(EnemyTurn());
-    }
+    } // Executed after the server sends return packet
 
-    IEnumerator EnemyTurn() // add dialogue for potion usage etc.
+    IEnumerator EnemyTurn() // TODO: Executed after a move's effect is displayed client side. Come back near end of project to maybe change golem to player, add animations etc too.
     {
-        dialogue.text = enemyUnit.username + " used " + enemyUnit.currentMove;
-        yield return new WaitForSeconds(1f);
         enemyAnimator.SetTrigger("Hit");
         if (localPlayerUnit.currentMove == "Protect")
         {
-            dialogue.text = localPlayerUnit.name + " blocked the attack!";
-            //localPlayerUnit.unBlock();
+            dialogue.text = enemyUnit.username + " used " + enemyUnit.currentMove;
+            yield return new WaitForSeconds(1f);
+            dialogue.text = localPlayerUnit.username + " blocked the attack!";
+
+            yield return new WaitForSeconds(1f);
+            state = BattleState.PLAYERTURN;
+            playerAnimator.SetTrigger("EndOfTurn");
+            PlayerTurn();
+        }
+        else if (enemyUnit.currentMove == "Heal")
+        {
+            dialogue.text = enemyUnit.username + " used a potion...";
+            playerUI.SetHP(localPlayerUnit.currentHP);
+            yield return new WaitForSeconds(1f);
+            dialogue.text = enemyUnit.username + " healed 50HP!";
             yield return new WaitForSeconds(1f);
             state = BattleState.PLAYERTURN;
             playerAnimator.SetTrigger("EndOfTurn");
@@ -290,9 +238,11 @@ public class BattleSystem : MonoBehaviour
         }
         else
         {
+            dialogue.text = enemyUnit.username + " used " + enemyUnit.currentMove;
+            yield return new WaitForSeconds(1f);
             playerAnimator.SetTrigger("Hit");
-            //bool isDead = localPlayerUnit.ReduceHP(enemyUnit.damage);
             playerUI.SetHP(localPlayerUnit.currentHP);
+            playerUI.SetDefense(localPlayerUnit.defense);
             yield return new WaitForSeconds(1f);
             if (localPlayerUnit.currentHP <= 0)
             {
@@ -309,6 +259,7 @@ public class BattleSystem : MonoBehaviour
 
     }
 
+    #region onClicks
     public void OnFightButton()
     {
         if (state != BattleState.PLAYERTURN)
@@ -327,12 +278,11 @@ public class BattleSystem : MonoBehaviour
         }
         if (localPlayerUnit.numberPotions <= 0)
         {
-            //yield break;
             return;
         }
         moveSelector.SetActive(false);
+        waitingUI.SetActive(true);
         ClientSend.MoveSelected("Heal");
-        //StartCoroutine(PlayerBag());
     }
 
     public void OnBlock()
@@ -343,8 +293,8 @@ public class BattleSystem : MonoBehaviour
         }
         moveSelector.SetActive(false);
         ClientSend.MoveSelected("Protect");
+        waitingUI.SetActive(true);
         dialogue.text = localPlayerUnit.name + " used Block!";
-        //StartCoroutine(Block());
     }
 
     public void OnSlash()
@@ -355,8 +305,8 @@ public class BattleSystem : MonoBehaviour
         }
         moveSelector.SetActive(false);
         ClientSend.MoveSelected("Slash");
+        waitingUI.SetActive(true);
         dialogue.text = localPlayerUnit.username + " used Slash!";
-        //StartCoroutine(Slash());
     }
 
     public void OnWhirlwind()
@@ -367,8 +317,8 @@ public class BattleSystem : MonoBehaviour
         }
         moveSelector.SetActive(false);
         ClientSend.MoveSelected("Whirlwind");
+        waitingUI.SetActive(true);
         dialogue.text = localPlayerUnit.username + " used Whirlwind Blade!";
-        //StartCoroutine(Whirlwind());
     }
 
     public void OnFlurry()
@@ -379,7 +329,8 @@ public class BattleSystem : MonoBehaviour
         }
         moveSelector.SetActive(false);
         ClientSend.MoveSelected("Flurry");
+        waitingUI.SetActive(true);
         dialogue.text = localPlayerUnit.username + " used Flurry!";
-        //StartCoroutine(Flurry());
     }
+    #endregion
 }

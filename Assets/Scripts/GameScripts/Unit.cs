@@ -18,6 +18,7 @@ public class Unit : MonoBehaviour
     public string currentMove;
     public int numberPotions;
     public bool isBlocking = false;
+    public int timesHit = 0;
 
     public bool ReduceHP(float damage)
     {
