@@ -45,6 +45,7 @@ public class GameManager : MonoBehaviour
         _player.GetComponent<Unit>().username = _username;
         _player.GetComponent<Unit>().maxHP = _maxHP;
         _player.GetComponent<Unit>().currentHP = _maxHP;
+        _player.GetComponent<Unit>().numberPotions = _numberPotions;
         players.Add(_id, _player.GetComponent<Unit>());
 
     }

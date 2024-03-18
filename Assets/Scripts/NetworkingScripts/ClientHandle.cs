@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using UnityEngine;
+using System.Text;
 
 public class ClientHandle : MonoBehaviour
 {
@@ -58,5 +59,27 @@ public class ClientHandle : MonoBehaviour
         {
             GameManager.instance.PlayTurn(GameManager.players[_id].currentMove);
         }
+    }
+
+    public static void JsonResult(Packet _packet)
+    {
+        string _jsonData = _packet.ReadString();
+        Unit testUnit = JsonUtility.FromJson<Unit>(_jsonData);
+        Debug.Log(testUnit.ToString());
+    }
+
+    public static void MarkerRecieved(Packet _packet)
+    {
+        Debug.Log(_packet.ReadString());
+        GameManager.instance.battleSystem.RecordState();
+        // Record state, send marker. Unless it initiated.
+        /*if (battleSystem.snapshotManager.initiatedSnapshot)
+        {
+            // record state of Server -> client channel. In this case, always empty.
+        }
+        else
+        {
+            battleSystem.RecordState(); // Sends Marker.
+        }*/
     }
 }

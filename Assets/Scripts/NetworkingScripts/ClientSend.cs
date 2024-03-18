@@ -45,6 +45,15 @@ public class ClientSend : MonoBehaviour
             SendUDPData(_packet);
         }
     }
+
+    public static void Marker()
+    {
+        using(Packet _packet = new Packet((int)ClientPackets.marker))
+        {
+            _packet.Write("Marker arrived, initiate snapshot");
+            SendTCPData(_packet);
+        }
+    }
     #endregion
 }
 

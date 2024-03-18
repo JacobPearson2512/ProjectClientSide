@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using static SnapshotRecording;
 
 public enum BattleState { START, PLAYERTURN, ENEMYTURN, WON, LOST }
 
@@ -29,6 +30,11 @@ public class BattleSystem : MonoBehaviour
     Animator playerAnimator;
     Animator enemyAnimator;
 
+    GlobalState globalState;
+    public SnapshotManager snapshotManager;
+
+    public int snapshotID = 0;
+
     public void StartBattleSystem()
     {
         localPlayerUnit = GameManager.players[Client.instance.myID];
@@ -45,7 +51,7 @@ public class BattleSystem : MonoBehaviour
         }
         enemyUnit = GameManager.players[id2]; // TODO figure out what this client id would be
         enemyPlayer = enemyUnit.gameObject;
-
+        snapshotManager = new SnapshotManager();
 
         numberPotions = 3;
         moveSelector.SetActive(false);
@@ -99,6 +105,8 @@ public class BattleSystem : MonoBehaviour
     void PlayerTurn()
     {
         dialogue.text = "What will you do?";
+        RecordState();
+        snapshotManager.initiatedSnapshot = true;
     }
 
     public IEnumerator Block() // Executed after the server sends return packet
@@ -333,4 +341,33 @@ public class BattleSystem : MonoBehaviour
         dialogue.text = localPlayerUnit.username + " used Flurry!";
     }
     #endregion
+
+    public void RecordState()
+    {
+        if (!snapshotManager.initiatedSnapshot)
+        {
+            if (localPlayerUnit.id == 1)
+            {
+                globalState = new SnapshotRecording.GlobalState(localPlayerUnit.currentHP, enemyUnit.currentHP, localPlayerUnit.defense, enemyUnit.defense, localPlayerUnit.numberPotions, enemyUnit.numberPotions);
+            }
+            else
+            {
+                globalState = new SnapshotRecording.GlobalState(enemyUnit.currentHP, localPlayerUnit.currentHP, enemyUnit.defense, localPlayerUnit.defense, enemyUnit.numberPotions, localPlayerUnit.numberPotions);
+            }
+            Snapshot snapshot = snapshotManager.TakeSnapshot(snapshotID, globalState);
+            if (snapshot != null)
+            {
+                Debug.Log($"Snapshot {snapshot.snapshotId}:\nPlayer 1: <HP: {snapshot.state.player1Health}, Defense: {snapshot.state.player1Defense}, Potions: {snapshot.state.player1Potions}> Player 2: <HP: {snapshot.state.player2Health}, Defense: {snapshot.state.player2Defense}, Potions: {snapshot.state.player2Potions}>");
+            }
+            snapshotID += 1;
+            ClientSend.Marker();
+        }
+        else
+        {
+            Debug.Log("Marker Received, snapshot algorithm complete.");
+            // record state of Server -> client channel. In this case, always empty.
+            snapshotManager.initiatedSnapshot = false;
+        }
+
+    }
 }
