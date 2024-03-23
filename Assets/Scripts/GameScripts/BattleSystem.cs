@@ -236,7 +236,7 @@ public class BattleSystem : MonoBehaviour
         else if (enemyUnit.currentMove == "Heal")
         {
             dialogue.text = enemyUnit.username + " used a potion...";
-            playerUI.SetHP(localPlayerUnit.currentHP);
+            enemyUI.SetHP(enemyUnit.currentHP);
             yield return new WaitForSeconds(1f);
             dialogue.text = enemyUnit.username + " healed 50HP!";
             yield return new WaitForSeconds(1f);
