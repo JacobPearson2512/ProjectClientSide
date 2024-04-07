@@ -12,7 +12,9 @@ public enum ServerPackets
     spawnPlayer,
     startBattle,
     updatePlayer,
-    udpTest
+    udpTest,
+    jsonResult,
+    marker
 }
 
 /// <summary>Sent from client to server.</summary>
@@ -20,7 +22,12 @@ public enum ClientPackets
 {
     welcomeReceived = 1,
     moveSelection,
-    udpTestReceived
+    udpTestReceived,
+    marker,
+    sendInitialState,
+    sendWinner,
+    sendFinalState,
+    sendMoveHistory
 }
 
 public class Packet : IDisposable

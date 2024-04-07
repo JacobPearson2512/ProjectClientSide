@@ -9,6 +9,7 @@ public class GameManager : MonoBehaviour
     public BattleSystem battleSystem;
 
     public static Dictionary<int, Unit> players = new Dictionary<int, Unit>();
+    public List<MoveHistoryEntry> moveHistory = new List<MoveHistoryEntry>();
 
     public GameObject localPlayerPrefab;
     public GameObject playerPrefab;
@@ -45,6 +46,7 @@ public class GameManager : MonoBehaviour
         _player.GetComponent<Unit>().username = _username;
         _player.GetComponent<Unit>().maxHP = _maxHP;
         _player.GetComponent<Unit>().currentHP = _maxHP;
+        _player.GetComponent<Unit>().numberPotions = _numberPotions;
         players.Add(_id, _player.GetComponent<Unit>());
 
     }
@@ -76,5 +78,19 @@ public class GameManager : MonoBehaviour
                 break;
         }
 
+    }
+
+    public void AddToMoveHistory(int _player, string _action, string _effect)
+    {
+        moveHistory.Add(new MoveHistoryEntry(_player, _action, _effect));
+    }
+
+    public void ReadMoveHistory()
+    {
+        Debug.Log("Move History: ");
+        foreach (var entry in moveHistory)
+        {
+            Debug.Log($"Player: {entry.playerID} Move: {entry.actionName}, Effect: {entry.actionEffect}");
+        }
     }
 }

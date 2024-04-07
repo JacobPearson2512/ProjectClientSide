@@ -5,19 +5,16 @@ using UnityEngine;
 public class Unit : MonoBehaviour
 {
     public int id;
-    //[SerializeField]
     public string username;
-    [SerializeField]
     public int maxHP;
-    [SerializeField]
     public int currentHP;
-    [SerializeField]
     public float damage;
-    [SerializeField]
     public float defense;
     public string currentMove;
     public int numberPotions;
     public bool isBlocking = false;
+    public int timesHit = 0;
+    public bool hasWon = false;
 
     public bool ReduceHP(float damage)
     {

@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using static SnapshotRecording;
+using JetBrains.Annotations;
 
-public enum BattleState { START, PLAYERTURN, ENEMYTURN, WON, LOST }
+public enum BattleState { START, PLAYERTURN, ENEMYTURN, WON, LOST, TIE }
 
 public class BattleSystem : MonoBehaviour
 {
@@ -13,6 +15,7 @@ public class BattleSystem : MonoBehaviour
     public BattleState state;
 
     public GameObject moveSelector;
+    public GameObject waitingUI;
 
     Unit localPlayerUnit;
     Unit enemyUnit;
@@ -24,14 +27,23 @@ public class BattleSystem : MonoBehaviour
     public BattleUI enemyUI;
 
     public int numberPotions = 0;
+    public int preTurnEnemyHealth;
+    public int preTurnLocalHealth;
 
     Animator playerAnimator;
     Animator enemyAnimator;
 
+    GlobalState globalState;
+
+
+    public SnapshotManager snapshotManager;
+
+    public int snapshotID = 0;
+
     public void StartBattleSystem()
     {
         localPlayerUnit = GameManager.players[Client.instance.myID];
-        Debug.Log($"Plyaer name: {localPlayerUnit.username}");
+        Debug.Log($"Player name: {localPlayerUnit.username}");
         localPlayer = localPlayerUnit.gameObject;
         int id2;
         if (Client.instance.myID == 1)
@@ -43,16 +55,29 @@ public class BattleSystem : MonoBehaviour
             id2 = 1;
         }
         enemyUnit = GameManager.players[id2]; // TODO figure out what this client id would be
+        preTurnEnemyHealth = enemyUnit.currentHP;
+        preTurnLocalHealth = localPlayerUnit.currentHP;
         enemyPlayer = enemyUnit.gameObject;
-
-
+        snapshotManager = new SnapshotManager();
+        if (localPlayerUnit.id == 1)
+        {
+            enemyUnit.currentHP = 149; // todo check - cant force the mismatch?
+            globalState = new SnapshotRecording.GlobalState(localPlayerUnit.currentHP, enemyUnit.currentHP, localPlayerUnit.defense, enemyUnit.defense, localPlayerUnit.numberPotions, enemyUnit.numberPotions);
+        }
+        else
+        {
+            globalState = new SnapshotRecording.GlobalState(enemyUnit.currentHP, localPlayerUnit.currentHP, enemyUnit.defense, localPlayerUnit.defense, enemyUnit.numberPotions, localPlayerUnit.numberPotions);
+        }
+        Snapshot snapshot = snapshotManager.TakeSnapshot(snapshotID, globalState);
+        snapshotID += 1;
+        ClientSend.SendInitialState(globalState);
         numberPotions = 3;
         moveSelector.SetActive(false);
+        waitingUI.SetActive(false);
         state = BattleState.START;
         StartCoroutine(BeginBattle());
         
     }
-    // TODO: COMMENTS ARE OLD STUFF REMOVED WHEN ADAPTING
     IEnumerator BeginBattle()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -65,7 +90,7 @@ public class BattleSystem : MonoBehaviour
         playerUI.SetUI(localPlayerUnit);
         enemyUI.SetUI(enemyUnit);
 
-        dialogue.text = enemyUnit.name + " appeared!";
+        dialogue.text = enemyUnit.username + " appeared!";
         bagButtonText.text = "Heal\n(Potions: " + numberPotions + ")";
 
         yield return new WaitForSeconds(2f);
@@ -78,64 +103,77 @@ public class BattleSystem : MonoBehaviour
 
     IEnumerator EndBattle()
     {
-        if(state == BattleState.WON)
+        GameManager.instance.ReadMoveHistory();
+        if (localPlayerUnit.id == 1)
+        {
+            globalState = new SnapshotRecording.GlobalState(localPlayerUnit.currentHP, enemyUnit.currentHP, localPlayerUnit.defense, enemyUnit.defense, localPlayerUnit.numberPotions, enemyUnit.numberPotions);
+        }
+        else
+        {
+            globalState = new SnapshotRecording.GlobalState(enemyUnit.currentHP, localPlayerUnit.currentHP, enemyUnit.defense, localPlayerUnit.defense, enemyUnit.numberPotions, localPlayerUnit.numberPotions);
+        }
+        ClientSend.SendFinalState(globalState);
+        ClientSend.SendMoveHistory(GameManager.instance.moveHistory);
+        if (state == BattleState.WON)
         {
             enemyAnimator.SetTrigger("Die");
             yield return new WaitForSeconds(1f);
             Destroy(enemyPlayer);
             dialogue.text = "You defeated " + enemyUnit.username;
             yield return new WaitForSeconds(2f);
+            ClientSend.SendWinner(localPlayerUnit.id);
         }
         else if (state == BattleState.LOST)
         {
             dialogue.text = "You were defeated by " + enemyUnit.username;
             yield return new WaitForSeconds(2f);
-            dialogue.text = "Restarting the game...";
-            yield return new WaitForSeconds(2f);
+            ClientSend.SendWinner(enemyUnit.id);
         }
+        else if (state == BattleState.TIE)
+        {
+            dialogue.text = "You both dealt a fatal blow. The battle is tied.";
+            yield return new WaitForSeconds(2f);
+            ClientSend.SendWinner(0);
+        }
+        dialogue.text = "Calculating Inconsistency...";
+        yield return new WaitForSeconds(2f);
+        
+
     }
 
     void PlayerTurn()
     {
+        preTurnEnemyHealth = enemyUnit.currentHP;
+        preTurnLocalHealth = localPlayerUnit.currentHP;
         dialogue.text = "What will you do?";
+        RecordState();
+        snapshotManager.initiatedSnapshot = true;
     }
 
-    public IEnumerator Block()
+    public IEnumerator Block() // Executed after the server sends return packet
     {
-        /*moveSelector.SetActive(false);
+        waitingUI.SetActive(false);
         playerAnimator.SetTrigger("Block");
-        localPlayerUnit.Block();
-        
         yield return new WaitForSeconds(2f);
-        state = BattleState.ENEMYTURN;
-        StartCoroutine(EnemyTurn());*/
-        yield return new WaitForSeconds(2f);
+        GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Protect", "Blocked attack.");
         state = BattleState.ENEMYTURN;
         StartCoroutine(EnemyTurn());
     }
 
-    public IEnumerator Slash()
+    public IEnumerator Slash() // Executed after the server sends return packet
     {
-        /*moveSelector.SetActive(false);
+        waitingUI.SetActive(false);
         playerAnimator.SetTrigger("Slash");
-        bool isDead = enemyUnit.ReduceHP(localPlayerUnit.damage);
         enemyUI.SetHP(enemyUnit.currentHP);
-        dialogue.text = localPlayerUnit.name + " used Slash!";
         yield return new WaitForSeconds(2f);
-        if (isDead)
+        int dealtDamage = preTurnEnemyHealth - enemyUnit.currentHP;
+        GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Slash", "Dealt " + dealtDamage);
+        if ((localPlayerUnit.currentHP <= 0 && enemyUnit.currentHP <= 0) || (localPlayerUnit.hasWon && enemyUnit.hasWon))
         {
-            state = BattleState.WON;
-            StartCoroutine(EndBattle());
-        }
-        else
-        {
-            state = BattleState.ENEMYTURN;
+            state = BattleState.TIE;
             StartCoroutine(EnemyTurn());
-        }*/
-        
-        enemyUI.SetHP(enemyUnit.currentHP);
-        yield return new WaitForSeconds(2f);
-        if (enemyUnit.currentHP <= 0)
+        }
+        else if (enemyUnit.currentHP <= 0 || localPlayerUnit.hasWon)
         {
             state = BattleState.WON;
             StartCoroutine(EndBattle());
@@ -152,34 +190,23 @@ public class BattleSystem : MonoBehaviour
 
     }
 
-    public IEnumerator Whirlwind()
+    public IEnumerator Whirlwind() // Executed after the server sends return packet
     {
-        /*moveSelector.SetActive(false);
+        waitingUI.SetActive(false);
         playerAnimator.SetTrigger("Whirlwind");
-        bool isDead = enemyUnit.ReduceHP(15);
-        enemyUnit.defense = Mathf.Round(enemyUnit.defense * 8f ) / 10;
         enemyUI.SetHP(enemyUnit.currentHP);
         enemyUI.SetDefense(enemyUnit.defense);
-        dialogue.text = localPlayerUnit.name + " used Whirlwind Blade!";
         yield return new WaitForSeconds(1f);
-        dialogue.text = "Reduced " + enemyUnit.name + "'s defense by 10%!";
+        dialogue.text = "Reduced " + enemyUnit.username + "'s defense by 20%!";
         yield return new WaitForSeconds(2f);
-        if (isDead)
+        int dealtDamage = preTurnEnemyHealth - enemyUnit.currentHP;
+        GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Whirlwind", "Dealt " + dealtDamage);
+        if ((localPlayerUnit.currentHP <= 0 && enemyUnit.currentHP <= 0) || (localPlayerUnit.hasWon && enemyUnit.hasWon))
         {
-            state = BattleState.WON;
-            StartCoroutine(EndBattle());
-        }
-        else
-        {
-            state = BattleState.ENEMYTURN;
+            state = BattleState.TIE;
             StartCoroutine(EnemyTurn());
-        }*/
-        enemyUI.SetHP(enemyUnit.currentHP);
-        enemyUI.SetDefense(enemyUnit.defense);
-        yield return new WaitForSeconds(1f);
-        dialogue.text = "Reduced " + enemyUnit.username + "2's defense by 10%!";
-        yield return new WaitForSeconds(2f);
-        if (enemyUnit.currentHP <= 0)
+        }
+        else if (enemyUnit.currentHP <= 0 || localPlayerUnit.hasWon)
         {
             state = BattleState.WON;
             StartCoroutine(EndBattle());
@@ -195,12 +222,11 @@ public class BattleSystem : MonoBehaviour
         }
     }
 
-    public IEnumerator Flurry() // TODO done temp anim cause cant be arsed
+    public IEnumerator Flurry() // Executed after the server sends return packet
     {
-        /*moveSelector.SetActive(false);
-        int timesHit = Random.Range(2, 6);
-        
-        for (int i = 1; i < timesHit+1; i++)
+        waitingUI.SetActive(false);
+        int timesHit = localPlayerUnit.timesHit;
+        for (int i = 1; i < timesHit + 1; i++)
         {
             yield return new WaitForSeconds(0.5f);
             if (i % 2 == 0)
@@ -213,29 +239,20 @@ public class BattleSystem : MonoBehaviour
                 Debug.Log("right");
                 playerAnimator.SetTrigger("FlurryRight");
             }
-            bool isDead = enemyUnit.ReduceHP(15);
-            enemyUI.SetHP(enemyUnit.currentHP);
-            if (isDead)
-            {
-                yield return new WaitForSeconds(1f);
-                dialogue.text = "Hit " + enemyUnit.name + " " + i + " times!";
-                yield return new WaitForSeconds(2f);
-                state = BattleState.WON;
-                StartCoroutine(EndBattle());
-                break;
-            }
+            
         }
-        if (state != BattleState.WON)
-        {
-            dialogue.text = "Hit " + enemyUnit.name + " " + timesHit + " times!";
-            playerAnimator.SetTrigger("EndOfTurn");
-            yield return new WaitForSeconds(2f);
-            state = BattleState.ENEMYTURN;
-            StartCoroutine(EnemyTurn());
-        }*/
+        yield return new WaitForSeconds(1f);
+        dialogue.text = "Hit " + enemyUnit.username + " " + timesHit + " times!";
         yield return new WaitForSeconds(2f);
         enemyUI.SetHP(enemyUnit.currentHP);
-        if (enemyUnit.currentHP <= 0)
+        int dealtDamage = preTurnEnemyHealth - enemyUnit.currentHP; 
+        GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Flurry", "Hit " + timesHit + ", dealt " + dealtDamage);
+        if ((localPlayerUnit.currentHP <= 0 && enemyUnit.currentHP <= 0) || (localPlayerUnit.hasWon && enemyUnit.hasWon))
+        {
+            state = BattleState.TIE;
+            StartCoroutine(EnemyTurn());
+        }
+        else if (enemyUnit.currentHP <= 0 || localPlayerUnit.hasWon)
         {
             state = BattleState.WON;
             StartCoroutine(EndBattle());
@@ -254,47 +271,72 @@ public class BattleSystem : MonoBehaviour
 
     public IEnumerator PlayerBag()
     {
-        /*
-        localPlayerUnit.usePotion(50);
-        numberPotions -= 1;
-        
-        yield return new WaitForSeconds(1f);
-        
-        
-        
-        state = BattleState.ENEMYTURN;
-        StartCoroutine(EnemyTurn());*/
+        waitingUI.SetActive(false);
         yield return new WaitForSeconds(2f);
         dialogue.text = "You used a potion...";
         yield return new WaitForSeconds(1f);
         dialogue.text = $"{localPlayerUnit.username} healed " + 50 + " HP!";
         playerUI.SetHP(localPlayerUnit.currentHP);
         bagButtonText.text = "Heal\n(Potions: " + localPlayerUnit.numberPotions + ")";
+        GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Potion", "Healed 50hp");
         state = BattleState.ENEMYTURN;
         StartCoroutine(EnemyTurn());
-    }
+    } // Executed after the server sends return packet
 
-    IEnumerator EnemyTurn() // add dialogue for potion usage etc.
+    IEnumerator EnemyTurn() // TODO: Executed after a move's effect is displayed client side. Come back near end of project to maybe change golem to player, add animations etc too.
     {
-        dialogue.text = enemyUnit.username + " used " + enemyUnit.currentMove;
-        yield return new WaitForSeconds(1f);
         enemyAnimator.SetTrigger("Hit");
         if (localPlayerUnit.currentMove == "Protect")
         {
-            dialogue.text = localPlayerUnit.name + " blocked the attack!";
-            //localPlayerUnit.unBlock();
+            dialogue.text = enemyUnit.username + " used " + enemyUnit.currentMove;
             yield return new WaitForSeconds(1f);
+            dialogue.text = localPlayerUnit.username + " blocked the attack!";
+            GameManager.instance.AddToMoveHistory(enemyUnit.id, enemyUnit.currentMove, "Dealt " + 0);
+            yield return new WaitForSeconds(1f);
+            state = BattleState.PLAYERTURN;
+
+            playerAnimator.SetTrigger("EndOfTurn");
+            PlayerTurn();
+        }
+        else if (enemyUnit.currentMove == "Heal")
+        {
+            dialogue.text = enemyUnit.username + " used a potion...";
+            enemyUI.SetHP(enemyUnit.currentHP);
+            yield return new WaitForSeconds(1f);
+            dialogue.text = enemyUnit.username + " healed 50HP!";
+            yield return new WaitForSeconds(1f);
+            GameManager.instance.AddToMoveHistory(enemyUnit.id, "Potion", "Healed 50hp");
             state = BattleState.PLAYERTURN;
             playerAnimator.SetTrigger("EndOfTurn");
             PlayerTurn();
         }
         else
         {
-            playerAnimator.SetTrigger("Hit");
-            //bool isDead = localPlayerUnit.ReduceHP(enemyUnit.damage);
-            playerUI.SetHP(localPlayerUnit.currentHP);
+            dialogue.text = enemyUnit.username + " used " + enemyUnit.currentMove;
             yield return new WaitForSeconds(1f);
-            if (localPlayerUnit.currentHP <= 0)
+            playerAnimator.SetTrigger("Hit");
+            playerUI.SetHP(localPlayerUnit.currentHP);
+            playerUI.SetDefense(localPlayerUnit.defense);
+            yield return new WaitForSeconds(1f);
+            int dealtDamage = preTurnLocalHealth - localPlayerUnit.currentHP;
+            if (enemyUnit.currentMove == "Flurry")
+            {
+                GameManager.instance.AddToMoveHistory(enemyUnit.id, "Flurry", "Hit " + enemyUnit.timesHit + ", dealt " + dealtDamage);
+            }
+            else if(enemyUnit.currentMove == "Protect")
+            {
+                GameManager.instance.AddToMoveHistory(enemyUnit.id, enemyUnit.currentMove, "Blocked attack.");
+            }
+            else
+            {
+                GameManager.instance.AddToMoveHistory(enemyUnit.id, enemyUnit.currentMove, "Dealt " + dealtDamage);
+            }
+            if ((localPlayerUnit.currentHP <= 0 && enemyUnit.currentHP <= 0) || (localPlayerUnit.hasWon && enemyUnit.hasWon))
+            {
+                state = BattleState.TIE;
+                StartCoroutine(EndBattle());
+            }
+            else if (localPlayerUnit.currentHP <= 0 || enemyUnit.hasWon)
             {
                 state = BattleState.LOST;
                 StartCoroutine(EndBattle());
@@ -309,6 +351,7 @@ public class BattleSystem : MonoBehaviour
 
     }
 
+    #region onClicks
     public void OnFightButton()
     {
         if (state != BattleState.PLAYERTURN)
@@ -327,12 +370,11 @@ public class BattleSystem : MonoBehaviour
         }
         if (localPlayerUnit.numberPotions <= 0)
         {
-            //yield break;
             return;
         }
         moveSelector.SetActive(false);
+        waitingUI.SetActive(true);
         ClientSend.MoveSelected("Heal");
-        //StartCoroutine(PlayerBag());
     }
 
     public void OnBlock()
@@ -343,8 +385,8 @@ public class BattleSystem : MonoBehaviour
         }
         moveSelector.SetActive(false);
         ClientSend.MoveSelected("Protect");
-        dialogue.text = localPlayerUnit.name + " used Block!";
-        //StartCoroutine(Block());
+        waitingUI.SetActive(true);
+        dialogue.text = localPlayerUnit.username + " used Protect!";
     }
 
     public void OnSlash()
@@ -355,8 +397,8 @@ public class BattleSystem : MonoBehaviour
         }
         moveSelector.SetActive(false);
         ClientSend.MoveSelected("Slash");
+        waitingUI.SetActive(true);
         dialogue.text = localPlayerUnit.username + " used Slash!";
-        //StartCoroutine(Slash());
     }
 
     public void OnWhirlwind()
@@ -367,8 +409,8 @@ public class BattleSystem : MonoBehaviour
         }
         moveSelector.SetActive(false);
         ClientSend.MoveSelected("Whirlwind");
+        waitingUI.SetActive(true);
         dialogue.text = localPlayerUnit.username + " used Whirlwind Blade!";
-        //StartCoroutine(Whirlwind());
     }
 
     public void OnFlurry()
@@ -379,7 +421,37 @@ public class BattleSystem : MonoBehaviour
         }
         moveSelector.SetActive(false);
         ClientSend.MoveSelected("Flurry");
+        waitingUI.SetActive(true);
         dialogue.text = localPlayerUnit.username + " used Flurry!";
-        //StartCoroutine(Flurry());
+    }
+    #endregion
+
+    public void RecordState()
+    {
+        if (!snapshotManager.initiatedSnapshot)
+        {
+            if (localPlayerUnit.id == 1)
+            {
+                globalState = new SnapshotRecording.GlobalState(localPlayerUnit.currentHP, enemyUnit.currentHP, localPlayerUnit.defense, enemyUnit.defense, localPlayerUnit.numberPotions, enemyUnit.numberPotions);
+            }
+            else
+            {
+                globalState = new SnapshotRecording.GlobalState(enemyUnit.currentHP, localPlayerUnit.currentHP, enemyUnit.defense, localPlayerUnit.defense, enemyUnit.numberPotions, localPlayerUnit.numberPotions);
+            }
+            Snapshot snapshot = snapshotManager.TakeSnapshot(snapshotID, globalState);
+            if (snapshot != null)
+            {
+                Debug.Log($"Snapshot {snapshot.snapshotId}:\nPlayer 1: <HP: {snapshot.state.player1Health}, Defense: {snapshot.state.player1Defense}, Potions: {snapshot.state.player1Potions}> Player 2: <HP: {snapshot.state.player2Health}, Defense: {snapshot.state.player2Defense}, Potions: {snapshot.state.player2Potions}>");
+            }
+            snapshotID += 1;
+            ClientSend.Marker();
+        }
+        else
+        {
+            Debug.Log("Marker Received, snapshot algorithm complete.");
+            // record state of Server -> client channel. In this case, always empty.
+            snapshotManager.initiatedSnapshot = false;
+        }
+
     }
 }
