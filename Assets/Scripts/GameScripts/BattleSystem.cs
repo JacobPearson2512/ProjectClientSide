@@ -310,6 +310,17 @@ public class BattleSystem : MonoBehaviour
             playerAnimator.SetTrigger("EndOfTurn");
             PlayerTurn();
         }
+        else if (enemyUnit.currentMove == "Heal")
+        {
+            dialogue.text = enemyUnit.username + " used a potion...";
+            enemyUI.SetHP(enemyUnit.currentHP);
+            yield return new WaitForSeconds(1f);
+            dialogue.text = enemyUnit.username + " healed 50HP!";
+            yield return new WaitForSeconds(1f);
+            state = BattleState.PLAYERTURN;
+            playerAnimator.SetTrigger("EndOfTurn");
+            PlayerTurn();
+        }
         else
         {
             dialogue.text = enemyUnit.username + " used " + enemyUnit.currentMove;
