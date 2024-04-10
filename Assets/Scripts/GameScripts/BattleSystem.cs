@@ -61,7 +61,6 @@ public class BattleSystem : MonoBehaviour
         snapshotManager = new SnapshotManager();
         if (localPlayerUnit.id == 1)
         {
-            enemyUnit.currentHP = 149; // todo check - cant force the mismatch?
             globalState = new SnapshotRecording.GlobalState(localPlayerUnit.currentHP, enemyUnit.currentHP, localPlayerUnit.defense, enemyUnit.defense, localPlayerUnit.numberPotions, enemyUnit.numberPotions);
         }
         else
@@ -291,6 +290,10 @@ public class BattleSystem : MonoBehaviour
             dialogue.text = enemyUnit.username + " used " + enemyUnit.currentMove;
             yield return new WaitForSeconds(1f);
             dialogue.text = localPlayerUnit.username + " blocked the attack!";
+            if(enemyUnit.currentMove == "Flurry")
+            {
+                GameManager.instance.AddToMoveHistory(enemyUnit.id, "Flurry", "Hit " + enemyUnit.timesHit + ", dealt " + 0);
+            }
             GameManager.instance.AddToMoveHistory(enemyUnit.id, enemyUnit.currentMove, "Dealt " + 0);
             yield return new WaitForSeconds(1f);
             state = BattleState.PLAYERTURN;
@@ -306,17 +309,6 @@ public class BattleSystem : MonoBehaviour
             dialogue.text = enemyUnit.username + " healed 50HP!";
             yield return new WaitForSeconds(1f);
             GameManager.instance.AddToMoveHistory(enemyUnit.id, "Potion", "Healed 50hp");
-            state = BattleState.PLAYERTURN;
-            playerAnimator.SetTrigger("EndOfTurn");
-            PlayerTurn();
-        }
-        else if (enemyUnit.currentMove == "Heal")
-        {
-            dialogue.text = enemyUnit.username + " used a potion...";
-            enemyUI.SetHP(enemyUnit.currentHP);
-            yield return new WaitForSeconds(1f);
-            dialogue.text = enemyUnit.username + " healed 50HP!";
-            yield return new WaitForSeconds(1f);
             state = BattleState.PLAYERTURN;
             playerAnimator.SetTrigger("EndOfTurn");
             PlayerTurn();
