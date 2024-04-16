@@ -8,15 +8,17 @@ using static SnapshotRecording;
 public class ClientHandle : MonoBehaviour
 {
     public static BattleSystem battleSystem;
+
     public static void Welcome(Packet _packet)
     {
         string _msg = _packet.ReadString();
         int _id = _packet.ReadInt();
+        bool _useInjection = _packet.ReadBool();
 
         Debug.Log($"Message from server: {_msg}");
         Client.instance.myID = _id;
         ClientSend.WelcomeReceived();
-
+        Client.instance.useInjection = _useInjection;
         Client.instance.udp.Connect(((IPEndPoint)Client.instance.tcp.socket.Client.LocalEndPoint).Port);
     }
 

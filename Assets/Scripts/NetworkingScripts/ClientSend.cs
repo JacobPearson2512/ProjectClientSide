@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class ClientSend : MonoBehaviour
 {
+    public static InconsistencyInjection injection = new InconsistencyInjection();
     private static void SendTCPData(Packet _packet)
     {
         _packet.WriteLength();
@@ -73,6 +74,10 @@ public class ClientSend : MonoBehaviour
     {
         using (Packet _packet = new Packet((int)ClientPackets.sendWinner))
         {
+            if (Client.instance.useInjection)
+            {
+                _id = injection.AlterWinner(_id);
+            }
             _packet.Write(_id);
             SendTCPData(_packet);
         }
