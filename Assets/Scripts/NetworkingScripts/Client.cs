@@ -254,7 +254,8 @@ public class Client : MonoBehaviour
             {(int)ServerPackets.spawnPlayer, ClientHandle.SpawnPlayer},
             {(int)ServerPackets.startBattle, ClientHandle.StartBattle},
             {(int)ServerPackets.updatePlayer, ClientHandle.UpdatePlayer},
-            {(int)ServerPackets.marker, ClientHandle.MarkerRecieved}
+            {(int)ServerPackets.marker, ClientHandle.MarkerRecieved},
+            {(int)ServerPackets.Consensus, ClientHandle.Consensus}
         };
         Debug.Log("Initialised packets.");
     }

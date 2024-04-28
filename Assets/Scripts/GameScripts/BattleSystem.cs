@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using static SnapshotRecording;
 using JetBrains.Annotations;
+using System;
 
 public enum BattleState { START, PLAYERTURN, ENEMYTURN, WON, LOST, TIE }
 
@@ -29,6 +30,9 @@ public class BattleSystem : MonoBehaviour
     public int numberPotions = 0;
     public int preTurnEnemyHealth;
     public int preTurnLocalHealth;
+    public float preTurnEnemyDef;
+    public float preTurnLocalDef;
+    public bool recordThisTurn = false;
 
     Animator playerAnimator;
     Animator enemyAnimator;
@@ -57,6 +61,8 @@ public class BattleSystem : MonoBehaviour
         enemyUnit = GameManager.players[id2]; // TODO figure out what this client id would be
         preTurnEnemyHealth = enemyUnit.currentHP;
         preTurnLocalHealth = localPlayerUnit.currentHP;
+        preTurnEnemyDef = enemyUnit.defense;
+        preTurnLocalDef = localPlayerUnit.defense;
         enemyPlayer = enemyUnit.gameObject;
         snapshotManager = new SnapshotManager();
         if (localPlayerUnit.id == 1)
@@ -140,13 +146,17 @@ public class BattleSystem : MonoBehaviour
 
     }
 
-    void PlayerTurn()
+    public void PlayerTurn()
     {
         preTurnEnemyHealth = enemyUnit.currentHP;
+        Debug.Log($"PreTurn Health for enemy player: {preTurnEnemyHealth}");
         preTurnLocalHealth = localPlayerUnit.currentHP;
+        Debug.Log($"PreTurn Health for local player: {preTurnLocalHealth}");
+        preTurnLocalDef = localPlayerUnit.defense;
+        preTurnEnemyDef = enemyUnit.defense;
         dialogue.text = "What will you do?";
-        RecordState();
-        snapshotManager.initiatedSnapshot = true;
+        //RecordState();
+        //snapshotManager.initiatedSnapshot = true;
     }
 
     public IEnumerator Block() // Executed after the server sends return packet
@@ -166,6 +176,12 @@ public class BattleSystem : MonoBehaviour
         enemyUI.SetHP(enemyUnit.currentHP);
         yield return new WaitForSeconds(2f);
         int dealtDamage = preTurnEnemyHealth - enemyUnit.currentHP;
+        if (dealtDamage != (int)Math.Round(20.0f + (20.0f * (1.0f - enemyUnit.defense)))){ // BE AWARE THAT THIS IS BEFORE MOVE HISTORY. MAYBE CALCULATE THEN CHANGE MOVE IN HISTORY? OR KEEP SAME FOR INCONSISTENCY VALUE.
+            Debug.Log($"Slash detected as being altered (dealt {dealtDamage}), initiate snapshot algorithm.");
+            //RecordState();
+            recordThisTurn = true;
+            //snapshotManager.initiatedSnapshot = true;
+        }
         GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Slash", "Dealt " + dealtDamage);
         if ((localPlayerUnit.currentHP <= 0 && enemyUnit.currentHP <= 0) || (localPlayerUnit.hasWon && enemyUnit.hasWon))
         {
@@ -199,6 +215,13 @@ public class BattleSystem : MonoBehaviour
         dialogue.text = "Reduced " + enemyUnit.username + "'s defense by 20%!";
         yield return new WaitForSeconds(2f);
         int dealtDamage = preTurnEnemyHealth - enemyUnit.currentHP;
+        if (dealtDamage != (int)Math.Round(15 + (15 * (1.0f - preTurnEnemyDef))))
+        {
+            Debug.Log($"Whirlwind Blade detected as being altered, initiate snapshot {dealtDamage}");
+            //RecordState();
+            recordThisTurn = true;
+            //snapshotManager.initiatedSnapshot = true;
+        }
         GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Whirlwind", "Dealt " + dealtDamage);
         if ((localPlayerUnit.currentHP <= 0 && enemyUnit.currentHP <= 0) || (localPlayerUnit.hasWon && enemyUnit.hasWon))
         {
@@ -244,7 +267,15 @@ public class BattleSystem : MonoBehaviour
         dialogue.text = "Hit " + enemyUnit.username + " " + timesHit + " times!";
         yield return new WaitForSeconds(2f);
         enemyUI.SetHP(enemyUnit.currentHP);
-        int dealtDamage = preTurnEnemyHealth - enemyUnit.currentHP; 
+        int dealtDamage = preTurnEnemyHealth - enemyUnit.currentHP;
+        if (dealtDamage != (int)Math.Round(timesHit * (10 + (10 * (1.0f - enemyUnit.defense)))))
+        {
+            Debug.Log($"Damage that shouldve been dealt with flurry: {timesHit * (10 + (10 * (1.0f - preTurnEnemyDef)))}");
+            Debug.Log($"Flurry detected as being altered, initiate snapshot {dealtDamage}");
+            //RecordState();
+            recordThisTurn = true;
+            //snapshotManager.initiatedSnapshot = true;
+        }
         GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Flurry", "Hit " + timesHit + ", dealt " + dealtDamage);
         if ((localPlayerUnit.currentHP <= 0 && enemyUnit.currentHP <= 0) || (localPlayerUnit.hasWon && enemyUnit.hasWon))
         {
@@ -324,6 +355,14 @@ public class BattleSystem : MonoBehaviour
             int dealtDamage = preTurnLocalHealth - localPlayerUnit.currentHP;
             if (enemyUnit.currentMove == "Flurry")
             {
+                if (dealtDamage != enemyUnit.timesHit * (int)Math.Round(10 + (10 * (1.0f - localPlayerUnit.defense))))
+                {
+                    Debug.Log($"Damage that shouldve been dealt with flurry: {enemyUnit.timesHit * (10 + (10 * (1.0f - localPlayerUnit.defense)))}");
+                    Debug.Log($"Enemy's Flurry detected as being altered, initiate snapshot {dealtDamage}");
+                    //RecordState();
+                    recordThisTurn = true;
+                    //snapshotManager.initiatedSnapshot = true;
+                }
                 GameManager.instance.AddToMoveHistory(enemyUnit.id, "Flurry", "Hit " + enemyUnit.timesHit + ", dealt " + dealtDamage);
             }
             else if(enemyUnit.currentMove == "Protect")
@@ -332,6 +371,27 @@ public class BattleSystem : MonoBehaviour
             }
             else
             {
+                if (enemyUnit.currentMove == "Slash")
+                {
+                    if(dealtDamage != (int)Math.Round(20 + (20 * (1.0f - localPlayerUnit.defense))))
+                    {
+                        Debug.Log($"Enemy's {enemyUnit.currentMove} detected as being altered, initiate snapshot {dealtDamage}");
+                        //RecordState();
+                        recordThisTurn = true;
+                        //snapshotManager.initiatedSnapshot = true;
+                    }
+                }
+                else if (enemyUnit.currentMove == "Whirlwind")
+                {
+                    if (dealtDamage != (int)Math.Round(15 + (15 * (1.0f - preTurnLocalDef))))
+                    {
+                        Debug.Log($"Enemy's {enemyUnit.currentMove} detected as being altered, initiate snapshot {dealtDamage}");
+                        //RecordState();
+                        recordThisTurn = true;
+                        //snapshotManager.initiatedSnapshot = true;
+                    }
+                }
+                
                 GameManager.instance.AddToMoveHistory(enemyUnit.id, enemyUnit.currentMove, "Dealt " + dealtDamage);
             }
             if ((localPlayerUnit.currentHP <= 0 && enemyUnit.currentHP <= 0) || (localPlayerUnit.hasWon && enemyUnit.hasWon))
@@ -348,7 +408,16 @@ public class BattleSystem : MonoBehaviour
             {
                 state = BattleState.PLAYERTURN;
                 playerAnimator.SetTrigger("EndOfTurn");
-                PlayerTurn();
+                if (recordThisTurn)
+                {
+                    RecordState();
+                    recordThisTurn = false;
+                    snapshotManager.initiatedSnapshot = true;
+                }
+                else
+                {
+                    PlayerTurn();
+                }
             }
         }
 
@@ -447,7 +516,7 @@ public class BattleSystem : MonoBehaviour
                 Debug.Log($"Snapshot {snapshot.snapshotId}:\nPlayer 1: <HP: {snapshot.state.player1Health}, Defense: {snapshot.state.player1Defense}, Potions: {snapshot.state.player1Potions}> Player 2: <HP: {snapshot.state.player2Health}, Defense: {snapshot.state.player2Defense}, Potions: {snapshot.state.player2Potions}>");
             }
             snapshotID += 1;
-            ClientSend.Marker();
+            ClientSend.Marker(snapshot.state);
         }
         else
         {

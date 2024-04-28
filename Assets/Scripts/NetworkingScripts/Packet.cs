@@ -14,7 +14,8 @@ public enum ServerPackets
     updatePlayer,
     udpTest,
     jsonResult,
-    marker
+    marker,
+    Consensus
 }
 
 /// <summary>Sent from client to server.</summary>

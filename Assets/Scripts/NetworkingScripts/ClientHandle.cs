@@ -86,4 +86,28 @@ public class ClientHandle : MonoBehaviour
             battleSystem.RecordState(); // Sends Marker.
         }*/
     }
+
+    public static void Consensus(Packet _packet)
+    {
+        if(Client.instance.myID == 1)
+        {
+            GameManager.players[1].currentHP = _packet.ReadInt();
+            GameManager.players[2].currentHP = _packet.ReadInt();
+            GameManager.players[1].defense = _packet.ReadFloat();
+            GameManager.players[2].defense = _packet.ReadFloat();
+            GameManager.players[1].numberPotions = _packet.ReadInt();
+            GameManager.players[2].numberPotions = _packet.ReadInt();
+        }
+        else
+        {
+            GameManager.players[2].currentHP = _packet.ReadInt();
+            GameManager.players[1].currentHP = _packet.ReadInt();
+            GameManager.players[2].defense = _packet.ReadFloat();
+            GameManager.players[1].defense = _packet.ReadFloat();
+            GameManager.players[2].numberPotions = _packet.ReadInt();
+            GameManager.players[1].numberPotions = _packet.ReadInt();
+        }
+        GameManager.instance.battleSystem.PlayerTurn();
+
+    }
 }

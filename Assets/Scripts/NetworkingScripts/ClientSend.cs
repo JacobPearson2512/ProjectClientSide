@@ -47,11 +47,17 @@ public class ClientSend : MonoBehaviour
         }
     }
 
-    public static void Marker()
+    public static void Marker(SnapshotRecording.GlobalState _state)
     {
         using(Packet _packet = new Packet((int)ClientPackets.marker))
         {
             _packet.Write("Marker arrived, initiate snapshot");
+            _packet.Write(_state.player1Health);
+            _packet.Write(_state.player2Health);
+            _packet.Write(_state.player1Defense);
+            _packet.Write(_state.player2Defense);
+            _packet.Write(_state.player1Potions);
+            _packet.Write(_state.player2Potions);
             SendTCPData(_packet);
         }
     }
