@@ -22,14 +22,6 @@ public class ClientHandle : MonoBehaviour
         Client.instance.udp.Connect(((IPEndPoint)Client.instance.tcp.socket.Client.LocalEndPoint).Port);
     }
 
-    public static void UDPTest(Packet _packet)
-    {
-        string _msg = _packet.ReadString();
-
-        Debug.Log($"Received UDP packet: {_msg}");
-        ClientSend.UDPTestReceived();
-    }
-
     public static void SpawnPlayer(Packet _packet)
     {
         int _id = _packet.ReadInt();
@@ -63,13 +55,6 @@ public class ClientHandle : MonoBehaviour
         {
             GameManager.instance.PlayTurn(GameManager.players[_id].currentMove);
         }
-    }
-
-    public static void JsonResult(Packet _packet)
-    {
-        string _jsonData = _packet.ReadString();
-        Unit testUnit = JsonUtility.FromJson<Unit>(_jsonData);
-        Debug.Log(testUnit.ToString());
     }
 
     public static void MarkerRecieved(Packet _packet)

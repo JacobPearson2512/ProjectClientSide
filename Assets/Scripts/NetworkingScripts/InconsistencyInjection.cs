@@ -6,7 +6,7 @@ public class InconsistencyInjection
 {
     public int AlterWinner(int _winner)
     {
-        if (Random.Range(0, 2) == 1)
+        if (Random.Range(0, 3) == 1)
         {
             if (_winner == 1)
             {

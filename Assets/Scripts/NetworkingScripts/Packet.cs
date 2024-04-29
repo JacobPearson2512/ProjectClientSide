@@ -12,8 +12,6 @@ public enum ServerPackets
     spawnPlayer,
     startBattle,
     updatePlayer,
-    udpTest,
-    jsonResult,
     marker,
     Consensus
 }
@@ -23,7 +21,6 @@ public enum ClientPackets
 {
     welcomeReceived = 1,
     moveSelection,
-    udpTestReceived,
     marker,
     sendInitialState,
     sendWinner,
