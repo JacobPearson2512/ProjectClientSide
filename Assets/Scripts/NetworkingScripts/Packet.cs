@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 
-// TODO TAKEN FROM https://www.youtube.com/watch?v=4uHTSknGJaY either redo, or make sure to reference
+// ADAPTED FROM https://www.youtube.com/watch?v=4uHTSknGJaY - TOM WEILAND
 /// <summary>Sent from server to client.</summary>
 public enum ServerPackets
 {

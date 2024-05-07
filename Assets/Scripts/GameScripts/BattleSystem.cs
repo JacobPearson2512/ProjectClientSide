@@ -33,6 +33,7 @@ public class BattleSystem : MonoBehaviour
     public float preTurnEnemyDef;
     public float preTurnLocalDef;
     public bool recordThisTurn = false;
+    public bool newTurn = false;
 
     Animator playerAnimator;
     Animator enemyAnimator;
@@ -58,7 +59,7 @@ public class BattleSystem : MonoBehaviour
         {
             id2 = 1;
         }
-        enemyUnit = GameManager.players[id2]; // TODO figure out what this client id would be
+        enemyUnit = GameManager.players[id2];
         preTurnEnemyHealth = enemyUnit.currentHP;
         preTurnLocalHealth = localPlayerUnit.currentHP;
         preTurnEnemyDef = enemyUnit.defense;
@@ -148,6 +149,8 @@ public class BattleSystem : MonoBehaviour
 
     public void PlayerTurn()
     {
+        Debug.Log("NEW TURN");
+        newTurn = true;
         preTurnEnemyHealth = enemyUnit.currentHP;
         Debug.Log($"PreTurn Health for enemy player: {preTurnEnemyHealth}");
         preTurnLocalHealth = localPlayerUnit.currentHP;
@@ -155,8 +158,6 @@ public class BattleSystem : MonoBehaviour
         preTurnLocalDef = localPlayerUnit.defense;
         preTurnEnemyDef = enemyUnit.defense;
         dialogue.text = "What will you do?";
-        //RecordState();
-        //snapshotManager.initiatedSnapshot = true;
     }
 
     public IEnumerator Block() // Executed after the server sends return packet
@@ -178,9 +179,7 @@ public class BattleSystem : MonoBehaviour
         int dealtDamage = preTurnEnemyHealth - enemyUnit.currentHP;
         if (dealtDamage != (int)Math.Round(20.0f + (20.0f * (1.0f - enemyUnit.defense)))){ // BE AWARE THAT THIS IS BEFORE MOVE HISTORY. MAYBE CALCULATE THEN CHANGE MOVE IN HISTORY? OR KEEP SAME FOR INCONSISTENCY VALUE.
             Debug.Log($"Slash detected as being altered (dealt {dealtDamage}), initiate snapshot algorithm.");
-            //RecordState();
             recordThisTurn = true;
-            //snapshotManager.initiatedSnapshot = true;
         }
         GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Slash", "Dealt " + dealtDamage);
         if ((localPlayerUnit.currentHP <= 0 && enemyUnit.currentHP <= 0) || (localPlayerUnit.hasWon && enemyUnit.hasWon))
@@ -218,9 +217,7 @@ public class BattleSystem : MonoBehaviour
         if (dealtDamage != (int)Math.Round(15 + (15 * (1.0f - preTurnEnemyDef))))
         {
             Debug.Log($"Whirlwind Blade detected as being altered, initiate snapshot {dealtDamage}");
-            //RecordState();
             recordThisTurn = true;
-            //snapshotManager.initiatedSnapshot = true;
         }
         GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Whirlwind", "Dealt " + dealtDamage);
         if ((localPlayerUnit.currentHP <= 0 && enemyUnit.currentHP <= 0) || (localPlayerUnit.hasWon && enemyUnit.hasWon))
@@ -253,12 +250,10 @@ public class BattleSystem : MonoBehaviour
             yield return new WaitForSeconds(0.5f);
             if (i % 2 == 0)
             {
-                Debug.Log("left");
                 playerAnimator.SetTrigger("FlurryLeft");
             }
             else
             {
-                Debug.Log("right");
                 playerAnimator.SetTrigger("FlurryRight");
             }
             
@@ -272,9 +267,7 @@ public class BattleSystem : MonoBehaviour
         {
             Debug.Log($"Damage that shouldve been dealt with flurry: {timesHit * (10 + (10 * (1.0f - preTurnEnemyDef)))}");
             Debug.Log($"Flurry detected as being altered, initiate snapshot {dealtDamage}");
-            //RecordState();
             recordThisTurn = true;
-            //snapshotManager.initiatedSnapshot = true;
         }
         GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Flurry", "Hit " + timesHit + ", dealt " + dealtDamage);
         if ((localPlayerUnit.currentHP <= 0 && enemyUnit.currentHP <= 0) || (localPlayerUnit.hasWon && enemyUnit.hasWon))
@@ -299,7 +292,7 @@ public class BattleSystem : MonoBehaviour
         
     }
 
-    public IEnumerator PlayerBag()
+    public IEnumerator PlayerBag() // Executed after the server sends return packet
     {
         waitingUI.SetActive(false);
         yield return new WaitForSeconds(2f);
@@ -311,9 +304,9 @@ public class BattleSystem : MonoBehaviour
         GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Potion", "Healed 50hp");
         state = BattleState.ENEMYTURN;
         StartCoroutine(EnemyTurn());
-    } // Executed after the server sends return packet
+    } 
 
-    IEnumerator EnemyTurn() // TODO: Executed after a move's effect is displayed client side. Come back near end of project to maybe change golem to player, add animations etc too.
+    IEnumerator EnemyTurn() // Executed after a move's effect is displayed client side.
     {
         enemyAnimator.SetTrigger("Hit");
         if (localPlayerUnit.currentMove == "Protect")
@@ -325,10 +318,12 @@ public class BattleSystem : MonoBehaviour
             {
                 GameManager.instance.AddToMoveHistory(enemyUnit.id, "Flurry", "Hit " + enemyUnit.timesHit + ", dealt " + 0);
             }
-            GameManager.instance.AddToMoveHistory(enemyUnit.id, enemyUnit.currentMove, "Dealt " + 0);
+            else
+            {
+                GameManager.instance.AddToMoveHistory(enemyUnit.id, enemyUnit.currentMove, "Dealt " + 0);
+            }
             yield return new WaitForSeconds(1f);
             state = BattleState.PLAYERTURN;
-
             playerAnimator.SetTrigger("EndOfTurn");
             PlayerTurn();
         }
@@ -357,11 +352,8 @@ public class BattleSystem : MonoBehaviour
             {
                 if (dealtDamage != enemyUnit.timesHit * (int)Math.Round(10 + (10 * (1.0f - localPlayerUnit.defense))))
                 {
-                    Debug.Log($"Damage that shouldve been dealt with flurry: {enemyUnit.timesHit * (10 + (10 * (1.0f - localPlayerUnit.defense)))}");
                     Debug.Log($"Enemy's Flurry detected as being altered, initiate snapshot {dealtDamage}");
-                    //RecordState();
                     recordThisTurn = true;
-                    //snapshotManager.initiatedSnapshot = true;
                 }
                 GameManager.instance.AddToMoveHistory(enemyUnit.id, "Flurry", "Hit " + enemyUnit.timesHit + ", dealt " + dealtDamage);
             }
@@ -376,9 +368,7 @@ public class BattleSystem : MonoBehaviour
                     if(dealtDamage != (int)Math.Round(20 + (20 * (1.0f - localPlayerUnit.defense))))
                     {
                         Debug.Log($"Enemy's {enemyUnit.currentMove} detected as being altered, initiate snapshot {dealtDamage}");
-                        //RecordState();
                         recordThisTurn = true;
-                        //snapshotManager.initiatedSnapshot = true;
                     }
                 }
                 else if (enemyUnit.currentMove == "Whirlwind")
@@ -386,9 +376,7 @@ public class BattleSystem : MonoBehaviour
                     if (dealtDamage != (int)Math.Round(15 + (15 * (1.0f - preTurnLocalDef))))
                     {
                         Debug.Log($"Enemy's {enemyUnit.currentMove} detected as being altered, initiate snapshot {dealtDamage}");
-                        //RecordState();
                         recordThisTurn = true;
-                        //snapshotManager.initiatedSnapshot = true;
                     }
                 }
                 
@@ -525,5 +513,63 @@ public class BattleSystem : MonoBehaviour
             snapshotManager.initiatedSnapshot = false;
         }
 
+    }
+
+    public void ResolveMoveHistory()
+    {
+        int enemyDealtDamage = preTurnLocalHealth - localPlayerUnit.currentHP;
+        int localDealtDamage = preTurnEnemyHealth - enemyUnit.currentHP;
+        Debug.Log("Trying to resolve move history.");
+        Debug.Log($"The health of the player prior to the corruption was {preTurnLocalHealth}");
+        Debug.Log($"It is now {localPlayerUnit.currentHP}");
+        Debug.Log($"The health of the enemy prior to the corruption was {preTurnEnemyHealth}");
+        Debug.Log($"It is now {enemyUnit.currentHP}");
+
+        if ( GameManager.instance.moveHistory.Count < 2)
+        {
+            Debug.Log("move history too small.");
+        }
+        else
+        {
+            GameManager.instance.moveHistory.RemoveAt(GameManager.instance.moveHistory.Count - 1);
+            GameManager.instance.moveHistory.RemoveAt(GameManager.instance.moveHistory.Count - 1);
+        }
+        
+        switch (localPlayerUnit.currentMove)
+        {
+            case "Slash":
+                GameManager.instance.AddToMoveHistory(localPlayerUnit.id, localPlayerUnit.currentMove, "Dealt " + localDealtDamage);
+                break;
+            case "Flurry":
+                GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Flurry", "Hit " + localPlayerUnit.timesHit + ", dealt " + localDealtDamage);
+                break;
+            case "Whirlwind":
+                GameManager.instance.AddToMoveHistory(localPlayerUnit.id, localPlayerUnit.currentMove, "Dealt " + localDealtDamage);
+                break;
+            case "Heal":
+                GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Potion", "Healed 50hp");
+                break;
+            case "Protect":
+                GameManager.instance.AddToMoveHistory(localPlayerUnit.id, "Protect", "Blocked attack.");
+                break;
+        }
+        switch (enemyUnit.currentMove)
+        {
+            case "Slash":
+                GameManager.instance.AddToMoveHistory(enemyUnit.id, enemyUnit.currentMove, "Dealt " + enemyDealtDamage);
+                break;
+            case "Flurry":
+                GameManager.instance.AddToMoveHistory(enemyUnit.id, "Flurry", "Hit " + enemyUnit.timesHit + ", dealt " + enemyDealtDamage);
+                break;
+            case "Whirlwind":
+                GameManager.instance.AddToMoveHistory(enemyUnit.id, enemyUnit.currentMove, "Dealt " + enemyDealtDamage);
+                break;
+            case "Heal":
+                GameManager.instance.AddToMoveHistory(enemyUnit.id, "Potion", "Healed 50hp");
+                break;
+            case "Protect":
+                GameManager.instance.AddToMoveHistory(enemyUnit.id, "Protect", "Blocked attack.");
+                break;
+        }
     }
 }

@@ -51,14 +51,6 @@ public class SnapshotRecording : MonoBehaviour
             snapshots.Add(snapshot);
             return snapshot;
         }
-
-        // Method to analyze snapshots and detect inconsistencies
-        public void AnalyzeSnapshots()
-        {
-            // Implement logic to analyze snapshots and detect inconsistencies
-            // For example, compare the states of different snapshots to identify discrepancies
-            // You can also implement Lamport's snapshot algorithm here
-        }
     }
 
 

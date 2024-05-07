@@ -8,6 +8,7 @@ using static SnapshotRecording;
 public class ClientHandle : MonoBehaviour
 {
     public static BattleSystem battleSystem;
+    static bool consensusPacketReceived = false;
 
     public static void Welcome(Packet _packet)
     {
@@ -53,6 +54,8 @@ public class ClientHandle : MonoBehaviour
         GameManager.players[_id].hasWon = _packet.ReadBool();
         if (_id == Client.instance.myID)
         {
+            GameManager.instance.battleSystem.newTurn = false;
+            consensusPacketReceived = false;
             GameManager.instance.PlayTurn(GameManager.players[_id].currentMove);
         }
     }
@@ -61,19 +64,19 @@ public class ClientHandle : MonoBehaviour
     {
         Debug.Log(_packet.ReadString());
         GameManager.instance.battleSystem.RecordState();
-        // Record state, send marker. Unless it initiated.
-        /*if (battleSystem.snapshotManager.initiatedSnapshot)
-        {
-            // record state of Server -> client channel. In this case, always empty.
-        }
-        else
-        {
-            battleSystem.RecordState(); // Sends Marker.
-        }*/
     }
 
     public static void Consensus(Packet _packet)
     {
+        Debug.Log("Consensus Packet Received");
+        if (consensusPacketReceived)
+        {
+            return;
+        }
+        if (GameManager.instance.battleSystem.newTurn)
+        {
+            return;
+        }
         if(Client.instance.myID == 1)
         {
             GameManager.players[1].currentHP = _packet.ReadInt();
@@ -92,6 +95,8 @@ public class ClientHandle : MonoBehaviour
             GameManager.players[2].numberPotions = _packet.ReadInt();
             GameManager.players[1].numberPotions = _packet.ReadInt();
         }
+        GameManager.instance.battleSystem.ResolveMoveHistory();
+        consensusPacketReceived = true;
         GameManager.instance.battleSystem.PlayerTurn();
 
     }
